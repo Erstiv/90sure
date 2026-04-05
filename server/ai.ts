@@ -12,7 +12,7 @@ export async function generateQuestions(
   sources: { title: string; url: string; index: number }[],
   facts: string[]
 ): Promise<{ text: string; answer: number; source: string }[]> {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const sourcesContext =
     sources.length > 0
