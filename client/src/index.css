@@ -1,0 +1,72 @@
+@import url('https://fonts.googleapis.com/css2?family=Architects+Daughter&family=DM+Sans:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Playful Palette */
+  --background: 280 50% 98%;      /* Very light purple tint */
+  --foreground: 280 60% 15%;      /* Deep purple text */
+  
+  --primary: 265 90% 60%;         /* Vibrant Purple */
+  --primary-foreground: 0 0% 100%;
+  
+  --secondary: 180 80% 45%;       /* Teal */
+  --secondary-foreground: 0 0% 100%;
+  
+  --accent: 330 85% 65%;          /* Hot Pink */
+  --accent-foreground: 0 0% 100%;
+  
+  --muted: 280 20% 90%;
+  --muted-foreground: 280 10% 40%;
+  
+  --card: 0 0% 100%;
+  --card-foreground: 280 60% 15%;
+  
+  --border: 280 30% 90%;
+  --input: 280 30% 90%;
+  
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  
+  --ring: 265 90% 60%;
+  
+  --radius: 1rem;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-accent selection:text-white;
+    font-family: 'DM Sans', sans-serif;
+    background-image: 
+      radial-gradient(circle at 10% 20%, rgba(216, 180, 254, 0.1) 0%, transparent 20%),
+      radial-gradient(circle at 90% 80%, rgba(167, 243, 208, 0.15) 0%, transparent 20%);
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Architects Daughter', cursive;
+    @apply text-foreground;
+  }
+}
+
+@layer components {
+  .btn-bounce {
+    @apply active:scale-95 transition-transform duration-100 ease-in-out;
+  }
+  
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-primary/30;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-primary/20 rounded-full hover:bg-primary/40 transition-colors;
+}
