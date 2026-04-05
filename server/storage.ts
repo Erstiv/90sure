@@ -92,7 +92,7 @@ export class DatabaseStorage implements IStorage {
   async createPlayer(gameId: number, name: string, sessionToken?: string): Promise<Player> {
     const game = await this.getGame(gameId);
     const token = sessionToken || (game?.mode === "online" ? generateSessionToken() : null);
-    const [player] = await db.insert(players).values({ gameId, name, sessionToken: token, hasSubmitted: 0 }).returning();
+    const [player] = await db.insert(players).values({ gameId, name, sessionToken: token, hasSubmitted: 0, isConnected: 1, disconnectedAt: null }).returning();
     return player;
   }
 
@@ -151,6 +151,18 @@ export class DatabaseStorage implements IStorage {
 
   async deleteGameQuestions(gameId: number): Promise<void> {
     await db.delete(gameQuestions).where(eq(gameQuestions.gameId, gameId));
+  }
+
+  async updatePlayerConnection(playerId: number, isConnected: boolean, disconnectedAt: number | null): Promise<Player> {
+    const [player] = await db.update(players)
+      .set({ isConnected: isConnected ? 1 : 0, disconnectedAt })
+      .where(eq(players.id, playerId))
+      .returning();
+    return player;
+  }
+
+  async getConnectedPlayers(gameId: number): Promise<Player[]> {
+    return await db.select().from(players).where(and(eq(players.gameId, gameId), eq(players.isConnected, 1)));
   }
 }
 

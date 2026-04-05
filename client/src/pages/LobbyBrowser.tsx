@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useLobbies, useCreateGame, useJoinGame } from "@/hooks/use-games";
+import { useLobbies, useCreateGame, useJoinGame, useGameByCode } from "@/hooks/use-games";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { Layout } from "@/components/Layout";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Plus, ArrowLeft, Loader2, RefreshCw, Gamepad2 } from "lucide-react";
+import { Users, Plus, ArrowLeft, Loader2, RefreshCw, Gamepad2, Hash } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const SESSION_KEY = "90sure_session";
@@ -22,18 +22,23 @@ export default function LobbyBrowser() {
   const createGame = useCreateGame();
   const joinGame = useJoinGame();
 
-  const [view, setView] = useState<"browse" | "create">("browse");
+  const findGameByCode = useGameByCode();
+
+  const [view, setView] = useState<"browse" | "create" | "join-code">("browse");
   const [roomName, setRoomName] = useState("");
   const [category, setCategory] = useState("general knowledge");
   const [difficulty, setDifficulty] = useState("normal");
   const [hostName, setHostName] = useState("");
   const [joiningId, setJoiningId] = useState<number | null>(null);
   const [playerName, setPlayerName] = useState("");
+  const [joinCode, setJoinCode] = useState("");
+  const [codeError, setCodeError] = useState("");
+  const [foundGame, setFoundGame] = useState<any>(null);
+  const [codePlayerName, setCodePlayerName] = useState("");
 
+  // Refetch lobbies periodically as a fallback (socket updates are primary)
   useEffect(() => {
-    const interval = setInterval(() => {
-      refetch();
-    }, 3000);
+    const interval = setInterval(() => refetch(), 15000);
     return () => clearInterval(interval);
   }, [refetch]);
 
@@ -72,38 +77,144 @@ export default function LobbyBrowser() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 mb-6">
+        <div className="grid grid-cols-3 gap-3 mb-6">
           <button
             type="button"
             onClick={() => setView("browse")}
             className={`p-4 rounded-xl border-2 transition-all text-center ${
-              view === "browse" 
-                ? "border-primary bg-primary/10 shadow-md" 
+              view === "browse"
+                ? "border-primary bg-primary/10 shadow-md"
                 : "border-border bg-white/30 hover:border-primary/50"
             }`}
             data-testid="button-view-browse"
           >
             <Users className="w-6 h-6 mx-auto mb-2" />
-            <div className="font-bold">Browse Rooms</div>
-            <div className="text-xs text-muted-foreground">Join an existing game</div>
+            <div className="font-bold">Browse</div>
+            <div className="text-xs text-muted-foreground">Join a room</div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setView("join-code")}
+            className={`p-4 rounded-xl border-2 transition-all text-center ${
+              view === "join-code"
+                ? "border-primary bg-primary/10 shadow-md"
+                : "border-border bg-white/30 hover:border-primary/50"
+            }`}
+            data-testid="button-view-join-code"
+          >
+            <Hash className="w-6 h-6 mx-auto mb-2" />
+            <div className="font-bold">Join Code</div>
+            <div className="text-xs text-muted-foreground">Enter a code</div>
           </button>
           <button
             type="button"
             onClick={() => setView("create")}
             className={`p-4 rounded-xl border-2 transition-all text-center ${
-              view === "create" 
-                ? "border-primary bg-primary/10 shadow-md" 
+              view === "create"
+                ? "border-primary bg-primary/10 shadow-md"
                 : "border-border bg-white/30 hover:border-primary/50"
             }`}
             data-testid="button-view-create"
           >
             <Plus className="w-6 h-6 mx-auto mb-2" />
-            <div className="font-bold">Create Room</div>
-            <div className="text-xs text-muted-foreground">Start a new game</div>
+            <div className="font-bold">Create</div>
+            <div className="text-xs text-muted-foreground">New game</div>
           </button>
         </div>
 
-        {view === "create" ? (
+        {view === "join-code" ? (
+          <Card className="p-6">
+            <h3 className="text-xl font-bold mb-4">Join by Game Code</h3>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="joinCode">Game Code</Label>
+                <Input
+                  id="joinCode"
+                  value={joinCode}
+                  onChange={(e) => {
+                    setJoinCode(e.target.value.toUpperCase().slice(0, 6));
+                    setCodeError("");
+                    setFoundGame(null);
+                  }}
+                  placeholder="Enter 6-character code..."
+                  className="text-center text-2xl tracking-widest font-mono"
+                  maxLength={6}
+                  data-testid="input-join-code"
+                />
+              </div>
+              {codeError && (
+                <p className="text-destructive text-sm">{codeError}</p>
+              )}
+              {!foundGame ? (
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={async () => {
+                    if (joinCode.length !== 6) {
+                      setCodeError("Code must be 6 characters");
+                      return;
+                    }
+                    try {
+                      const res = await fetch(`/api/games/join/${joinCode}`);
+                      if (!res.ok) {
+                        setCodeError("Game not found");
+                        return;
+                      }
+                      const game = await res.json();
+                      if (game.status !== "setup") {
+                        setCodeError("Game has already started");
+                        return;
+                      }
+                      setFoundGame(game);
+                    } catch {
+                      setCodeError("Failed to find game");
+                    }
+                  }}
+                  disabled={joinCode.length !== 6}
+                  data-testid="button-find-game"
+                >
+                  Find Game
+                </Button>
+              ) : (
+                <div className="space-y-4">
+                  <div className="p-4 bg-primary/5 rounded-xl">
+                    <p className="font-bold text-lg">{foundGame.roomName || foundGame.category}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {foundGame.category} · <span className="capitalize">{foundGame.difficulty}</span>
+                      {foundGame.hostName && ` · Host: ${foundGame.hostName}`}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="codePlayerName">Your Name</Label>
+                    <Input
+                      id="codePlayerName"
+                      value={codePlayerName}
+                      onChange={(e) => setCodePlayerName(e.target.value)}
+                      placeholder="Enter your name..."
+                      autoFocus
+                      data-testid="input-code-player-name"
+                    />
+                  </div>
+                  <Button
+                    className="w-full"
+                    size="lg"
+                    onClick={async () => {
+                      if (!codePlayerName.trim()) return;
+                      const result = await joinGame.mutateAsync({ gameId: foundGame.id, name: codePlayerName });
+                      storeSession(foundGame.id, result.player.id, result.sessionToken);
+                      setLocation(`/game/${foundGame.id}`);
+                    }}
+                    disabled={!codePlayerName.trim() || joinGame.isPending}
+                    isLoading={joinGame.isPending}
+                    data-testid="button-join-by-code"
+                  >
+                    Join Game
+                  </Button>
+                </div>
+              )}
+            </div>
+          </Card>
+        ) : view === "create" ? (
           <Card className="p-6">
             <h3 className="text-xl font-bold mb-4">Create New Waiting Room</h3>
             <div className="space-y-4">

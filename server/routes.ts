@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { generateQuestions } from "./ai";
 import { searchCategoryFacts } from "./tavily";
-import { getIO } from "./socket";
+import { getIO, checkAllSubmitted, broadcastGameState } from "./socket";
 
 function getFallbackQuestions(_category: string) {
   return [
@@ -105,6 +105,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const game = await storage.getGame(id);
     if (!game) return res.status(404).json({ message: "Game not found" });
     if (game.mode !== "online") return res.status(400).json({ message: "Not an online game" });
+    if (game.status !== "setup") return res.status(400).json({ message: "Game has already started" });
     const player = await storage.createPlayer(id, name.trim());
     if (!player.sessionToken) return res.status(500).json({ message: "Failed to generate session" });
     res.json({ player, sessionToken: player.sessionToken });
@@ -121,21 +122,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     await storage.updatePlayerSubmitted(player.id, true);
     const io = getIO();
     io?.to(`game-${id}`).emit("submission-update", { playerId: player.id });
-    const players = await storage.getPlayers(id);
-    const allSubmitted = players.every(p => p.hasSubmitted === 1);
-    if (allSubmitted) {
-      const questions = await storage.getGameQuestions(id);
-      await storage.resetPlayersSubmitted(id);
-      if (game.currentQuestionIndex >= questions.length - 1) {
-        await storage.updateGameStatus(id, "finished", game.currentQuestionIndex);
-      } else {
-        await storage.updateGameStatus(id, "playing", game.currentQuestionIndex + 1);
-      }
-      const updatedGame = await storage.getGame(id);
-      const updatedPlayers = await storage.getPlayers(id);
-      io?.to(`game-${id}`).emit("game-state-changed", updatedGame);
-      io?.to(`game-${id}`).emit("players-updated", updatedPlayers);
-    }
+    await checkAllSubmitted(id);
     res.json({ success: true });
   });
 

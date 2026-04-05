@@ -24,7 +24,7 @@ export function useGame(id?: number) {
       return json; // Skip zod parsing for now to bypass type issues in fast mode
     },
     enabled: !!id,
-    refetchInterval: 1000, // Poll for multiplayer updates
+    refetchInterval: 30000, // Safety fallback - real updates come via socket
   });
 }
 
@@ -46,7 +46,7 @@ export function useLobbies() {
       if (!res.ok) throw new Error("Failed to fetch lobbies");
       return await res.json() as Lobby[];
     },
-    refetchInterval: 3000,
+    refetchInterval: 15000, // Safety fallback
   });
 }
 

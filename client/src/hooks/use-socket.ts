@@ -1,6 +1,17 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { queryClient } from "@/lib/queryClient";
+
+const SESSION_KEY = "90sure_session";
+
+function getSession(): { gameId: number; playerId: number; sessionToken: string } | null {
+  try {
+    const stored = localStorage.getItem(SESSION_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
+  }
+}
 
 let socket: Socket | null = null;
 
@@ -8,43 +19,115 @@ function getSocket(): Socket {
   if (!socket) {
     socket = io(window.location.origin, {
       transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 20,
     });
   }
   return socket;
 }
 
+export interface AnswerRevealData {
+  questionIndex: number;
+  question: string;
+  answer: number;
+  source: string | null;
+  guesses: { playerId: number; low: number; high: number; correct: boolean }[];
+  players: { id: number; name: string }[];
+}
+
 export function useSocket(gameId: number | null) {
   const socketRef = useRef<Socket | null>(null);
+  const [isConnected, setIsConnected] = useState(true);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const [answerReveal, setAnswerReveal] = useState<AnswerRevealData | null>(null);
+  const [disconnectedPlayer, setDisconnectedPlayer] = useState<{ playerId: number; playerName: string } | null>(null);
 
   useEffect(() => {
     if (!gameId) return;
 
     const s = getSocket();
     socketRef.current = s;
-    s.emit("join-game", gameId);
 
-    const handlePlayersUpdated = () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });
+    // Register with server for online games
+    const session = getSession();
+    if (session && session.gameId === gameId) {
+      s.emit("register-player", {
+        gameId: session.gameId,
+        playerId: session.playerId,
+        sessionToken: session.sessionToken,
+      });
+    } else {
+      // Local mode - just join the room
+      s.emit("join-game", gameId);
+    }
+
+    // Connection status handlers
+    const handleConnect = () => {
+      setIsConnected(true);
+      setIsReconnecting(false);
+      // Re-register on reconnect
+      const sess = getSession();
+      if (sess && sess.gameId === gameId) {
+        s.emit("register-player", {
+          gameId: sess.gameId,
+          playerId: sess.playerId,
+          sessionToken: sess.sessionToken,
+        });
+      }
     };
 
-    const handleGameStateChanged = () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });
+    const handleDisconnect = () => {
+      setIsConnected(false);
+    };
+
+    const handleReconnectAttempt = () => {
+      setIsReconnecting(true);
+    };
+
+    // Game state pushed directly into React Query cache
+    const handleGameStateChanged = (data: any) => {
+      queryClient.setQueryData(["/api/games", gameId], data);
     };
 
     const handleSubmissionUpdate = () => {
       queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });
     };
 
-    s.on("players-updated", handlePlayersUpdated);
+    const handleAnswerReveal = (data: AnswerRevealData) => {
+      setAnswerReveal(data);
+    };
+
+    const handlePlayerDisconnected = (data: { playerId: number; playerName: string }) => {
+      setDisconnectedPlayer(data);
+      // Auto-clear notification after 5 seconds
+      setTimeout(() => setDisconnectedPlayer(null), 5000);
+    };
+
+    s.on("connect", handleConnect);
+    s.on("disconnect", handleDisconnect);
+    s.on("reconnect_attempt", handleReconnectAttempt);
     s.on("game-state-changed", handleGameStateChanged);
     s.on("submission-update", handleSubmissionUpdate);
+    s.on("answer-reveal", handleAnswerReveal);
+    s.on("player-disconnected", handlePlayerDisconnected);
 
     return () => {
-      s.off("players-updated", handlePlayersUpdated);
+      s.off("connect", handleConnect);
+      s.off("disconnect", handleDisconnect);
+      s.off("reconnect_attempt", handleReconnectAttempt);
       s.off("game-state-changed", handleGameStateChanged);
       s.off("submission-update", handleSubmissionUpdate);
+      s.off("answer-reveal", handleAnswerReveal);
+      s.off("player-disconnected", handlePlayerDisconnected);
     };
   }, [gameId]);
+
+  // Clear answer reveal when game advances to next question
+  const clearAnswerReveal = useCallback(() => {
+    setAnswerReveal(null);
+  }, []);
 
   const emitPlayerJoined = useCallback((gameId: number) => {
     socketRef.current?.emit("player-joined", gameId);
@@ -63,6 +146,11 @@ export function useSocket(gameId: number | null) {
   }, []);
 
   return {
+    isConnected,
+    isReconnecting,
+    answerReveal,
+    clearAnswerReveal,
+    disconnectedPlayer,
     emitPlayerJoined,
     emitPlayerSubmitted,
     emitGameStarted,

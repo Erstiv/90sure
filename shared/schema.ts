@@ -4,7 +4,7 @@ import { z } from "zod";
 
 export const games = pgTable("games", {
   id: serial("id").primaryKey(),
-  status: text("status").notNull().default("setup"), // setup, playing, finished
+  status: text("status").notNull().default("setup"), // setup, playing, revealing, finished
   currentQuestionIndex: integer("current_question_index").notNull().default(0),
   category: text("category").notNull().default("general knowledge"),
   difficulty: text("difficulty").notNull().default("normal"), // easy, normal, hard, expert
@@ -13,6 +13,8 @@ export const games = pgTable("games", {
   visibility: text("visibility").notNull().default("private"), // public or private
   hostName: text("host_name"), // name of the game creator
   roomName: text("room_name"), // custom name for the waiting room
+  maxPlayers: integer("max_players").notNull().default(10),
+  timePerQuestion: integer("time_per_question"), // seconds, null = no timer
 });
 
 export const players = pgTable("players", {
@@ -21,6 +23,8 @@ export const players = pgTable("players", {
   name: text("name").notNull(),
   sessionToken: text("session_token"), // unique token for online players
   hasSubmitted: integer("has_submitted").notNull().default(0), // 1 if submitted for current question
+  isConnected: integer("is_connected").notNull().default(1), // 0 when disconnected
+  disconnectedAt: integer("disconnected_at"), // unix timestamp ms
 });
 
 export const guesses = pgTable("guesses", {

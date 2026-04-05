@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useGame, useAddPlayer, useStartGame, useSubmitGuesses, useResetGame, useSubmitPlayerGuess, useJoinGame, calculateResults } from "@/hooks/use-games";
-import { useSocket } from "@/hooks/use-socket";
+import { useSocket, type AnswerRevealData } from "@/hooks/use-socket";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { Card } from "@/components/Card";
 import { Layout } from "@/components/Layout";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Play, Trophy, RotateCcw, ArrowRight, CheckCircle2, Crown, AlertCircle, Volume2, Info, Copy, Users, Check, Loader2 } from "lucide-react";
+import { Plus, Play, Trophy, RotateCcw, ArrowRight, CheckCircle2, Crown, AlertCircle, Volume2, Info, Copy, Users, Check, Loader2, WifiOff, Wifi } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -78,13 +78,21 @@ export default function GameRoom() {
   const [, params] = useRoute("/game/:id");
   const [, setLocation] = useLocation();
   const gameId = params ? parseInt(params.id) : 0;
-  
+
   const { data, isLoading, error } = useGame(gameId);
+  const socket = useSocket(gameId || null);
 
   // If no ID or 404, redirect home
   useEffect(() => {
     if (!gameId) setLocation("/");
   }, [gameId, setLocation]);
+
+  // Clear answer reveal when game advances past revealing
+  useEffect(() => {
+    if (data?.game.status === "playing" && socket.answerReveal) {
+      socket.clearAnswerReveal();
+    }
+  }, [data?.game.status, data?.game.currentQuestionIndex]);
 
   if (isLoading) {
     return (
@@ -111,11 +119,144 @@ export default function GameRoom() {
 
   const { game } = data;
 
+  // Connection status banner
+  const connectionBanner = !socket.isConnected && game.mode === "online" ? (
+    <div className="bg-destructive/10 text-destructive text-sm text-center px-4 py-2 rounded-lg mb-4 flex items-center justify-center gap-2 animate-pulse">
+      <WifiOff className="w-4 h-4" />
+      {socket.isReconnecting ? "Reconnecting..." : "Connection lost"}
+    </div>
+  ) : null;
+
+  // Player disconnect notification
+  const disconnectNotice = socket.disconnectedPlayer && game.mode === "online" ? (
+    <div className="bg-amber-500/10 text-amber-700 text-sm text-center px-4 py-2 rounded-lg mb-4">
+      {socket.disconnectedPlayer.playerName} disconnected — auto-submitting in 30s if they don't return
+    </div>
+  ) : null;
+
+  // Answer reveal screen (online mode)
+  if (socket.answerReveal && game.mode === "online") {
+    return (
+      <Layout>
+        {connectionBanner}
+        <AnswerRevealScreen reveal={socket.answerReveal} players={data.players} />
+      </Layout>
+    );
+  }
+
   if (game.status === 'setup') return <SetupScreen data={data} />;
-  if (game.status === 'playing') return <PlayingScreen data={data} />;
+  if (game.status === 'playing' || game.status === 'revealing') {
+    return (
+      <Layout>
+        {connectionBanner}
+        {disconnectNotice}
+        <PlayingScreen data={data} />
+      </Layout>
+    );
+  }
   if (game.status === 'finished') return <ResultsScreen data={data} />;
 
   return null;
+}
+
+// -----------------------------------------------------------------------------
+// ANSWER REVEAL SCREEN (shown between questions in online mode)
+// -----------------------------------------------------------------------------
+function AnswerRevealScreen({ reveal, players }: { reveal: NonNullable<ReturnType<typeof useSocket>['answerReveal']>; players: Player[] }) {
+  const [countdown, setCountdown] = useState(6);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const correctCount = reveal.guesses.filter(g => g.correct).length;
+  const totalPlayers = reveal.guesses.length;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="space-y-6"
+    >
+      {/* Progress bar */}
+      <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+        <motion.div
+          className="h-full bg-primary"
+          initial={{ width: "100%" }}
+          animate={{ width: "0%" }}
+          transition={{ duration: 6, ease: "linear" }}
+        />
+      </div>
+
+      <div className="text-center">
+        <p className="text-sm text-muted-foreground mb-2">
+          Question {reveal.questionIndex + 1} of 10
+        </p>
+        <h2 className="text-xl font-bold mb-6">{reveal.question}</h2>
+        <div className="inline-block bg-primary/10 border-2 border-primary rounded-2xl px-8 py-4 mb-6">
+          <p className="text-sm text-muted-foreground">The answer is</p>
+          <p className="text-5xl font-bold text-primary">{reveal.answer?.toLocaleString()}</p>
+        </div>
+      </div>
+
+      {/* Player results */}
+      <div className="grid gap-3">
+        {reveal.guesses.map((guess, i) => {
+          const player = reveal.players.find(p => p.id === guess.playerId);
+          const playerIdx = players.findIndex(p => p.id === guess.playerId);
+          const color = getPlayerColor(playerIdx >= 0 ? playerIdx : i);
+          return (
+            <motion.div
+              key={guess.playerId}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.1 }}
+              className={cn(
+                "flex items-center gap-3 p-3 rounded-xl border-2",
+                guess.correct
+                  ? "bg-green-500/10 border-green-500/30"
+                  : "bg-red-500/10 border-red-400/30"
+              )}
+            >
+              <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold", color)}>
+                {player?.name?.charAt(0).toUpperCase() || "?"}
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold">{player?.name || "Unknown"}</p>
+                <p className="text-sm text-muted-foreground">
+                  Range: {guess.low.toLocaleString()} – {guess.high.toLocaleString()}
+                </p>
+              </div>
+              {guess.correct ? (
+                <CheckCircle2 className="w-6 h-6 text-green-500" />
+              ) : (
+                <AlertCircle className="w-6 h-6 text-red-400" />
+              )}
+            </motion.div>
+          );
+        })}
+      </div>
+
+      <p className="text-center text-sm text-muted-foreground">
+        {correctCount}/{totalPlayers} got it right — next question in {countdown}s
+      </p>
+
+      {reveal.source && (
+        <p className="text-xs text-muted-foreground text-center">
+          Source: {reveal.source}
+        </p>
+      )}
+    </motion.div>
+  );
 }
 
 // -----------------------------------------------------------------------------
