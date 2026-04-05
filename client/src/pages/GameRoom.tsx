@@ -18,7 +18,7 @@ import confetti from "canvas-confetti";
 import { cn } from "@/lib/utils";
 import type { Player, Guess, GameQuestion } from "@shared/schema";
 
-const SESSION_KEY = "wellington_session";
+const SESSION_KEY = "90sure_session";
 
 function getStoredSession(): { gameId: number; playerId: number; sessionToken: string } | null {
   try {
@@ -647,7 +647,7 @@ function PlayingScreen({ data }: { data: NonNullable<ReturnType<typeof useGame>[
 // -----------------------------------------------------------------------------
 // RESULTS SCREEN
 // -----------------------------------------------------------------------------
-const LAST_GAME_KEY = "wellington_last_game";
+const LAST_GAME_KEY = "90sure_last_game";
 
 function ResultsScreen({ data }: { data: NonNullable<ReturnType<typeof useGame>['data']> }) {
   const { game, players, guesses, questions } = data;

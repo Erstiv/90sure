@@ -20,7 +20,7 @@ const allowlist = [
   "multer",
   "nanoid",
   "nodemailer",
-  "openai",
+  "@google/generative-ai",
   "passport",
   "passport-local",
   "pg",

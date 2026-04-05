@@ -30,10 +30,10 @@ export function Layout({ children }: { children: ReactNode }) {
             )}
           </div>
           <h1 className="text-5xl md:text-7xl font-bold text-primary mb-2 drop-shadow-sm tracking-tight">
-            Wellington Range
+            90sure
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground font-medium">
-            The guessing game where precision pays off
+            How sure are you?
           </p>
         </header>
         <main>

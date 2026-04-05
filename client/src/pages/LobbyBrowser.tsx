@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Users, Plus, ArrowLeft, Loader2, RefreshCw, Gamepad2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const SESSION_KEY = "wellington_session";
+const SESSION_KEY = "90sure_session";
 
 function storeSession(gameId: number, playerId: number, sessionToken: string) {
   localStorage.setItem(SESSION_KEY, JSON.stringify({ gameId, playerId, sessionToken }));

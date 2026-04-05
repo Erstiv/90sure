@@ -9,9 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Layout } from "@/components/Layout";
 import { motion } from "framer-motion";
 import { Users, Trophy } from "lucide-react";
-import poloLogo from "@assets/IMG_2288_1767446826917.jpeg";
 
-const LAST_GAME_KEY = "wellington_last_game";
+
+const LAST_GAME_KEY = "90sure_last_game";
 
 function getLastGameId(): number | null {
   try {
@@ -54,15 +54,15 @@ export default function Home() {
         >
           <img 
             src={poloLogo} 
-            alt="Wellington Range Logo" 
+            alt="90sure Logo" 
             className="w-64 h-64 object-contain drop-shadow-2xl"
           />
         </motion.div>
 
         <Card className="max-w-md w-full bg-white/50 backdrop-blur-sm border-2 border-white/50">
           <CardHeader className="text-center">
-            <CardTitle className="text-4xl font-display text-primary mb-2">Wellington Range</CardTitle>
-            <CardDescription className="text-lg">The ultimate precision guessing game!</CardDescription>
+            <CardTitle className="text-4xl font-display text-primary mb-2">90sure</CardTitle>
+            <CardDescription className="text-lg">How sure are you?</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-4">

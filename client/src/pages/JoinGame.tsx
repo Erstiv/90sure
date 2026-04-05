@@ -8,7 +8,7 @@ import { Layout } from "@/components/Layout";
 import { useSocket } from "@/hooks/use-socket";
 import { Users, Loader2 } from "lucide-react";
 
-const SESSION_KEY = "wellington_session";
+const SESSION_KEY = "90sure_session";
 
 function getStoredSession(): { gameId: number; playerId: number; sessionToken: string } | null {
   try {
