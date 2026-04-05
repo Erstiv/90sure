@@ -274,8 +274,9 @@ function SetupScreen({ data }: { data: NonNullable<ReturnType<typeof useGame>['d
   const joinUrl = isOnline ? `${window.location.origin}/join/${game.id}` : "";
   
   const storedSession = getStoredSession();
-  const hostHasJoined = storedSession?.gameId === game.id && 
-    players.some((p: Player) => p.id === storedSession?.playerId);
+  // Host has joined if we have a session for this game — don't require player list confirmation
+  // (avoids double-join when navigating from LobbyBrowser where host already joined)
+  const hostHasJoined = storedSession?.gameId === game.id && !!storedSession?.sessionToken;
 
   const handleAddPlayer = (e: React.FormEvent) => {
     e.preventDefault();

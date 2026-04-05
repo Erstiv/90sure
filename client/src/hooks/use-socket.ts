@@ -89,11 +89,11 @@ export function useSocket(gameId: number | null) {
 
     // Game state pushed directly into React Query cache
     const handleGameStateChanged = (data: any) => {
-      queryClient.setQueryData(["/api/games", gameId], data);
+      queryClient.setQueryData(["/api/games/:id", gameId], data);
     };
 
     const handleSubmissionUpdate = () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/games/:id", gameId] });
     };
 
     const handleAnswerReveal = (data: AnswerRevealData) => {
