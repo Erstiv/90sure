@@ -52,7 +52,7 @@ export default function Home() {
 
   return (
     <Layout>
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-4">
+      <div className="flex flex-col items-center p-4">
         <Card className="max-w-md w-full bg-white/50 backdrop-blur-sm border-2 border-white/50">
           <CardHeader className="text-center">
             <CardTitle className="text-4xl font-display text-primary mb-2">90sure</CardTitle>
@@ -67,7 +67,7 @@ export default function Home() {
                   value={hostName}
                   onChange={(e) => setHostName(e.target.value)}
                   placeholder="Enter your name..."
-                  className="text-lg py-6 bg-white/30 border-2 focus:border-primary transition-colors"
+                  className="text-base py-4 bg-white/30 border-2 focus:border-primary transition-colors"
                   data-testid="input-host-name"
                 />
               </div>
@@ -79,7 +79,7 @@ export default function Home() {
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   placeholder="e.g. general knowledge, 90s movies, biology..."
-                  className="text-lg py-6 bg-white/30 border-2 focus:border-primary transition-colors"
+                  className="text-base py-4 bg-white/30 border-2 focus:border-primary transition-colors"
                   data-testid="input-category"
                 />
               </div>
@@ -87,7 +87,7 @@ export default function Home() {
               <div className="space-y-2">
                 <Label htmlFor="difficulty" className="text-base font-semibold">Difficulty</Label>
                 <Select value={difficulty} onValueChange={setDifficulty}>
-                  <SelectTrigger id="difficulty" className="w-full bg-white/30 border-2 py-6 text-lg">
+                  <SelectTrigger id="difficulty" className="w-full bg-white/30 border-2 py-4 text-base">
                     <SelectValue placeholder="Select difficulty" />
                   </SelectTrigger>
                   <SelectContent className="z-50 bg-white dark:bg-gray-900">

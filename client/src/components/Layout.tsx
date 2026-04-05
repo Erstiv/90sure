@@ -16,7 +16,7 @@ export function Layout({ children }: { children: ReactNode }) {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="max-w-4xl mx-auto"
       >
-        <header className="mb-12 text-center">
+        <header className="mb-6 text-center">
           <div className="flex justify-end mb-2 min-h-[36px]">
             {!isHome && (
               <Button
