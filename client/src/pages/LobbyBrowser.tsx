@@ -74,7 +74,7 @@ export default function LobbyBrowser() {
           <Button variant="ghost" onClick={() => setLocation("/")} data-testid="button-back-home">
             <ArrowLeft className="mr-2 h-4 w-4" /> Home
           </Button>
-          <h1 className="text-3xl font-bold text-primary">Waiting Rooms</h1>
+          <h1 className="text-3xl font-bold text-primary">Rooms</h1>
           <Button variant="ghost" size="icon" onClick={() => refetch()} data-testid="button-refresh-lobbies">
             <RefreshCw className="h-4 w-4" />
           </Button>
@@ -219,7 +219,7 @@ export default function LobbyBrowser() {
           </Card>
         ) : view === "create" ? (
           <Card className="p-6">
-            <h3 className="text-xl font-bold mb-4">Create New Waiting Room</h3>
+            <h3 className="text-xl font-bold mb-4">Create New Room</h3>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="roomName">Room Name</Label>
@@ -288,7 +288,7 @@ export default function LobbyBrowser() {
                 isLoading={createGame.isPending || joinGame.isPending}
                 data-testid="button-submit-create-room"
               >
-                <Gamepad2 className="mr-2 h-5 w-5" /> Create Room & Start Waiting
+                <Gamepad2 className="mr-2 h-5 w-5" /> Create Room
               </Button>
             </div>
           </Card>
@@ -369,7 +369,7 @@ export default function LobbyBrowser() {
             ) : (
               <Card className="p-8 text-center">
                 <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-xl font-bold mb-2">No Waiting Rooms</h3>
+                <h3 className="text-xl font-bold mb-2">No Rooms</h3>
                 <p className="text-muted-foreground mb-4">
                   Be the first to create one and invite your friends!
                 </p>

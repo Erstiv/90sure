@@ -1,17 +1,16 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useCreateGame } from "@/hooks/use-games";
+import { useCreateGame, useJoinGame } from "@/hooks/use-games";
 import { Button } from "@/components/Button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/Card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Layout } from "@/components/Layout";
-import { motion } from "framer-motion";
-import { Users, Trophy } from "lucide-react";
-
+import { Users, Plus, Trophy } from "lucide-react";
 
 const LAST_GAME_KEY = "90sure_last_game";
+const SESSION_KEY = "90sure_session";
 
 function getLastGameId(): number | null {
   try {
@@ -22,26 +21,33 @@ function getLastGameId(): number | null {
   }
 }
 
+function storeSession(gameId: number, playerId: number, sessionToken: string) {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ gameId, playerId, sessionToken }));
+}
+
 export default function Home() {
   const [, setLocation] = useLocation();
   const [category, setCategory] = useState("general knowledge");
   const [difficulty, setDifficulty] = useState("normal");
-  const [mode, setMode] = useState<"local" | "online">("local");
+  const [hostName, setHostName] = useState("");
 
   const createGame = useCreateGame();
+  const joinGame = useJoinGame();
   const lastGameId = getLastGameId();
 
-  const handleStartGame = () => {
-    if (mode === "online") {
-      setLocation("/lobbies");
-      return;
-    }
-    if (!category.trim()) return;
-    createGame.mutate({ category, difficulty, mode }, {
-      onSuccess: (game) => {
-        setLocation(`/game/${game.id}`);
-      }
+  const handleCreateRoom = async () => {
+    if (!category.trim() || !hostName.trim()) return;
+    const game = await createGame.mutateAsync({
+      category,
+      difficulty,
+      mode: "online",
+      visibility: "public",
+      hostName,
+      roomName: `${hostName}'s game`,
     });
+    const result = await joinGame.mutateAsync({ gameId: game.id, name: hostName });
+    storeSession(game.id, result.player.id, result.sessionToken);
+    setLocation(`/game/${game.id}`);
   };
 
   return (
@@ -55,39 +61,19 @@ export default function Home() {
           <CardContent className="space-y-6">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-base font-semibold">Game Mode</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setMode("local")}
-                    className={`p-4 rounded-xl border-2 transition-all text-left ${
-                      mode === "local" 
-                        ? "border-primary bg-primary/10 shadow-md" 
-                        : "border-border bg-white/30 hover:border-primary/50"
-                    }`}
-                    data-testid="button-mode-local"
-                  >
-                    <div className="font-bold text-lg mb-1">Local</div>
-                    <div className="text-xs text-muted-foreground">Pass & play on one device</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMode("online")}
-                    className={`p-4 rounded-xl border-2 transition-all text-left ${
-                      mode === "online" 
-                        ? "border-primary bg-primary/10 shadow-md" 
-                        : "border-border bg-white/30 hover:border-primary/50"
-                    }`}
-                    data-testid="button-mode-online"
-                  >
-                    <div className="font-bold text-lg mb-1">Online</div>
-                    <div className="text-xs text-muted-foreground">Each player on their own device</div>
-                  </button>
-                </div>
+                <Label htmlFor="hostName" className="text-base font-semibold">Your Name</Label>
+                <Input
+                  id="hostName"
+                  value={hostName}
+                  onChange={(e) => setHostName(e.target.value)}
+                  placeholder="Enter your name..."
+                  className="text-lg py-6 bg-white/30 border-2 focus:border-primary transition-colors"
+                  data-testid="input-host-name"
+                />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="category" className="text-base font-semibold">Enter Category</Label>
+                <Label htmlFor="category" className="text-base font-semibold">Category</Label>
                 <Input
                   id="category"
                   value={category}
@@ -114,23 +100,35 @@ export default function Home() {
               </div>
             </div>
 
-            <Button
-              className="w-full text-xl py-8 font-display rounded-2xl shadow-xl shadow-primary/20"
-              size="lg"
-              onClick={handleStartGame}
-              disabled={mode === "local" && (createGame.isPending || !category.trim())}
-              data-testid="button-create-game"
-            >
-              {mode === "online" ? (
-                <><Users className="mr-2 h-5 w-5" /> Browse Waiting Rooms</>
-              ) : (
-                createGame.isPending ? "Generating Questions..." : "Start Local Game"
-              )}
-            </Button>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                className="text-lg py-7 font-display rounded-2xl shadow-lg shadow-primary/20"
+                size="lg"
+                onClick={handleCreateRoom}
+                disabled={createGame.isPending || joinGame.isPending || !category.trim() || !hostName.trim()}
+                data-testid="button-create-room"
+              >
+                {createGame.isPending || joinGame.isPending ? (
+                  "Creating..."
+                ) : (
+                  <><Plus className="mr-2 h-5 w-5" /> Create Room</>
+                )}
+              </Button>
+
+              <Button
+                variant="secondary"
+                className="text-lg py-7 font-display rounded-2xl"
+                size="lg"
+                onClick={() => setLocation("/lobbies")}
+                data-testid="button-browse-rooms"
+              >
+                <Users className="mr-2 h-5 w-5" /> Browse Rooms
+              </Button>
+            </div>
 
             {lastGameId && (
               <Button
-                variant="secondary"
+                variant="outline"
                 className="w-full"
                 onClick={() => setLocation(`/game/${lastGameId}`)}
                 data-testid="button-view-last-results"

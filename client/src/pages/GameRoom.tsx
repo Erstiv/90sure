@@ -434,18 +434,12 @@ function SetupScreen({ data }: { data: NonNullable<ReturnType<typeof useGame>['d
           className="w-full" 
           size="lg" 
           onClick={handleStartGame}
-          disabled={players.length < (isOnline ? 2 : 1) || startGame.isPending}
+          disabled={players.length < 1 || startGame.isPending}
           isLoading={startGame.isPending}
         >
-          <Play className="mr-2 h-5 w-5" /> 
-          {isOnline 
-            ? `Start Game with ${players.length} Player${players.length !== 1 ? 's' : ''}`
-            : "Start Game"
-          }
+          <Play className="mr-2 h-5 w-5" />
+          Start Game{players.length > 1 ? ` with ${players.length} Players` : ""}
         </Button>
-        {isOnline && players.length < 2 && (
-          <p className="text-center text-sm text-muted-foreground mt-2">Need at least 2 players to start</p>
-        )}
       </Card>
     </Layout>
   );
