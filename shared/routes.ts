@@ -29,7 +29,9 @@ export const api = {
         mode: z.enum(["local", "online"]).optional(),
         visibility: z.enum(["public", "private"]).optional(),
         hostName: z.string().optional(),
-        roomName: z.string().optional()
+        roomName: z.string().optional(),
+        timePerQuestion: z.number().optional(),
+        maxPlayers: z.number().optional(),
       }),
       responses: {
         200: z.custom<typeof games.$inferSelect>(),

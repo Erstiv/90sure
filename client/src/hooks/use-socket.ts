@@ -43,6 +43,7 @@ export function useSocket(gameId: number | null) {
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [answerReveal, setAnswerReveal] = useState<AnswerRevealData | null>(null);
   const [disconnectedPlayer, setDisconnectedPlayer] = useState<{ playerId: number; playerName: string } | null>(null);
+  const [timerDeadline, setTimerDeadline] = useState<number | null>(null);
 
   useEffect(() => {
     if (!gameId) return;
@@ -101,8 +102,11 @@ export function useSocket(gameId: number | null) {
 
     const handlePlayerDisconnected = (data: { playerId: number; playerName: string }) => {
       setDisconnectedPlayer(data);
-      // Auto-clear notification after 5 seconds
       setTimeout(() => setDisconnectedPlayer(null), 5000);
+    };
+
+    const handleTimerStarted = (data: { deadline: number }) => {
+      setTimerDeadline(data.deadline);
     };
 
     s.on("connect", handleConnect);
@@ -112,6 +116,7 @@ export function useSocket(gameId: number | null) {
     s.on("submission-update", handleSubmissionUpdate);
     s.on("answer-reveal", handleAnswerReveal);
     s.on("player-disconnected", handlePlayerDisconnected);
+    s.on("timer-started", handleTimerStarted);
 
     return () => {
       s.off("connect", handleConnect);
@@ -121,6 +126,7 @@ export function useSocket(gameId: number | null) {
       s.off("submission-update", handleSubmissionUpdate);
       s.off("answer-reveal", handleAnswerReveal);
       s.off("player-disconnected", handlePlayerDisconnected);
+      s.off("timer-started", handleTimerStarted);
     };
   }, [gameId]);
 
@@ -151,6 +157,7 @@ export function useSocket(gameId: number | null) {
     answerReveal,
     clearAnswerReveal,
     disconnectedPlayer,
+    timerDeadline,
     emitPlayerJoined,
     emitPlayerSubmitted,
     emitGameStarted,

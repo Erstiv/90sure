@@ -35,6 +35,7 @@ export default function LobbyBrowser() {
   const [codeError, setCodeError] = useState("");
   const [foundGame, setFoundGame] = useState<any>(null);
   const [codePlayerName, setCodePlayerName] = useState("");
+  const [timePerQuestion, setTimePerQuestion] = useState("0");
 
   // Refetch lobbies periodically as a fallback (socket updates are primary)
   useEffect(() => {
@@ -44,13 +45,15 @@ export default function LobbyBrowser() {
 
   const handleCreateRoom = async () => {
     if (!roomName.trim() || !hostName.trim() || !category.trim()) return;
+    const timerValue = parseInt(timePerQuestion);
     const game = await createGame.mutateAsync({
       category,
       difficulty,
       mode: "online",
       visibility: "public",
       hostName,
-      roomName
+      roomName,
+      ...(timerValue > 0 ? { timePerQuestion: timerValue } : {}),
     });
     const result = await joinGame.mutateAsync({ gameId: game.id, name: hostName });
     storeSession(game.id, result.player.id, result.sessionToken);
@@ -262,7 +265,22 @@ export default function LobbyBrowser() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button 
+              <div className="space-y-2">
+                <Label htmlFor="timer">Time per Question</Label>
+                <Select value={timePerQuestion} onValueChange={setTimePerQuestion}>
+                  <SelectTrigger id="timer" data-testid="select-timer">
+                    <SelectValue placeholder="Select timer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">No timer</SelectItem>
+                    <SelectItem value="30">30 seconds</SelectItem>
+                    <SelectItem value="60">60 seconds</SelectItem>
+                    <SelectItem value="90">90 seconds</SelectItem>
+                    <SelectItem value="120">2 minutes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
                 className="w-full"
                 size="lg"
                 onClick={handleCreateRoom}

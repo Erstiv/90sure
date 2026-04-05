@@ -8,6 +8,7 @@ let io: SocketIOServer | null = null;
 // In-memory maps for fast socket-player lookups
 const socketPlayerMap = new Map<string, { gameId: number; playerId: number }>();
 const disconnectTimers = new Map<number, NodeJS.Timeout>();
+const questionTimers = new Map<number, NodeJS.Timeout>(); // gameId -> timer
 const advancingGames = new Set<number>();
 
 export function setupSocketIO(httpServer: Server): SocketIOServer {
@@ -56,6 +57,7 @@ export function setupSocketIO(httpServer: Server): SocketIOServer {
     // Host starts the game
     socket.on("game-started", async (gameId: number) => {
       await broadcastGameState(gameId);
+      await startQuestionTimer(gameId);
     });
 
     // Legacy event support (local mode uses these)
@@ -187,6 +189,8 @@ export async function checkAllSubmitted(gameId: number): Promise<void> {
         }
 
         await broadcastGameState(gameId);
+        // Start question timer for next question if configured
+        startQuestionTimer(gameId);
       } catch (err) {
         log(`reveal timer error: ${err}`, "socket");
       }
@@ -194,6 +198,53 @@ export async function checkAllSubmitted(gameId: number): Promise<void> {
   } finally {
     setTimeout(() => advancingGames.delete(gameId), 7000);
   }
+}
+
+// Start a question timer if the game has timePerQuestion configured
+export async function startQuestionTimer(gameId: number): Promise<void> {
+  // Clear any existing timer for this game
+  const existing = questionTimers.get(gameId);
+  if (existing) {
+    clearTimeout(existing);
+    questionTimers.delete(gameId);
+  }
+
+  const game = await storage.getGame(gameId);
+  if (!game || !game.timePerQuestion || game.status !== "playing") return;
+
+  const deadline = Date.now() + game.timePerQuestion * 1000;
+  io?.to(`game-${gameId}`).emit("timer-started", { deadline });
+  log(`Question timer started: ${game.timePerQuestion}s for game ${gameId}`, "socket");
+
+  const timer = setTimeout(async () => {
+    questionTimers.delete(gameId);
+    try {
+      const currentGame = await storage.getGame(gameId);
+      if (!currentGame || currentGame.status !== "playing") return;
+
+      // Auto-submit for any players who haven't submitted
+      const players = await storage.getPlayers(gameId);
+      for (const player of players) {
+        if (player.hasSubmitted === 0) {
+          await storage.createGuesses([{
+            gameId,
+            playerId: player.id,
+            questionIndex: currentGame.currentQuestionIndex,
+            low: 0,
+            high: 999999,
+          }]);
+          await storage.updatePlayerSubmitted(player.id, true);
+          io?.to(`game-${gameId}`).emit("submission-update", { playerId: player.id, autoSubmitted: true });
+        }
+      }
+
+      await checkAllSubmitted(gameId);
+    } catch (err) {
+      log(`question timer error: ${err}`, "socket");
+    }
+  }, game.timePerQuestion * 1000);
+
+  questionTimers.set(gameId, timer);
 }
 
 // Broadcast full game state to all players in a room

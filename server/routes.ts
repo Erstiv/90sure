@@ -43,12 +43,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.post(api.games.create.path, async (req, res) => {
-    const { category, difficulty, mode, visibility, hostName, roomName } = api.games.create.input.parse(req.body);
+    const { category, difficulty, mode, visibility, hostName, roomName, timePerQuestion, maxPlayers } = api.games.create.input.parse(req.body);
     const categoryName = category || "general knowledge";
     const difficultyLevel = difficulty || "normal";
     const gameMode = mode || "local";
     const gameVisibility = visibility || (gameMode === "online" ? "public" : "private");
-    const game = await storage.createGame(categoryName, difficultyLevel, gameMode, gameVisibility, hostName, roomName);
+    const game = await storage.createGame(categoryName, difficultyLevel, gameMode, gameVisibility, hostName, roomName, timePerQuestion, maxPlayers);
     await generateGameQuestions(game.id, categoryName, difficultyLevel);
     res.json(game);
   });
@@ -106,6 +106,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (!game) return res.status(404).json({ message: "Game not found" });
     if (game.mode !== "online") return res.status(400).json({ message: "Not an online game" });
     if (game.status !== "setup") return res.status(400).json({ message: "Game has already started" });
+    const existingPlayers = await storage.getPlayers(id);
+    if (existingPlayers.length >= (game.maxPlayers || 10)) return res.status(400).json({ message: "Game is full" });
     const player = await storage.createPlayer(id, name.trim());
     if (!player.sessionToken) return res.status(500).json({ message: "Failed to generate session" });
     res.json({ player, sessionToken: player.sessionToken });

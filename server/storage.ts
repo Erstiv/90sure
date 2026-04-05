@@ -3,7 +3,7 @@ import { games, players, guesses, gameQuestions, type Game, type Player, type Gu
 import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
-  createGame(category: string, difficulty: string, mode?: string, visibility?: string, hostName?: string, roomName?: string): Promise<Game>;
+  createGame(category: string, difficulty: string, mode?: string, visibility?: string, hostName?: string, roomName?: string, timePerQuestion?: number, maxPlayers?: number): Promise<Game>;
   getGame(id: number): Promise<Game | undefined>;
   getGameByJoinCode(joinCode: string): Promise<Game | undefined>;
   getPublicLobbies(): Promise<{ id: number; category: string; difficulty: string; hostName: string | null; roomName: string | null; playerCount: number; joinCode: string | null }[]>;
@@ -35,18 +35,20 @@ function generateSessionToken(): string {
 }
 
 export class DatabaseStorage implements IStorage {
-  async createGame(category: string = "general knowledge", difficulty: string = "normal", mode: string = "local", visibility: string = "private", hostName?: string, roomName?: string): Promise<Game> {
+  async createGame(category: string = "general knowledge", difficulty: string = "normal", mode: string = "local", visibility: string = "private", hostName?: string, roomName?: string, timePerQuestion?: number, maxPlayers?: number): Promise<Game> {
     const joinCode = mode === "online" ? generateJoinCode() : null;
-    const [game] = await db.insert(games).values({ 
-      status: 'setup', 
-      currentQuestionIndex: 0, 
-      category, 
+    const [game] = await db.insert(games).values({
+      status: 'setup',
+      currentQuestionIndex: 0,
+      category,
       difficulty,
       mode,
       joinCode,
       visibility,
       hostName: hostName || null,
-      roomName: roomName || null
+      roomName: roomName || null,
+      timePerQuestion: timePerQuestion || null,
+      maxPlayers: maxPlayers || 10,
     }).returning();
     return game;
   }
