@@ -54,9 +54,8 @@ export default function Home() {
     <Layout>
       <div className="flex flex-col items-center p-4">
         <Card className="max-w-md w-full bg-white/50 backdrop-blur-sm border-2 border-white/50">
-          <CardHeader className="text-center">
-            <CardTitle className="text-4xl font-display text-primary mb-2">90sure</CardTitle>
-            <CardDescription className="text-lg">How sure are you?</CardDescription>
+          <CardHeader className="sr-only">
+            <CardTitle>90sure</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-4">
