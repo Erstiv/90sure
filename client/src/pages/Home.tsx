@@ -47,18 +47,6 @@ export default function Home() {
   return (
     <Layout>
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-4">
-        <motion.div
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="mb-8"
-        >
-          <img 
-            src={poloLogo} 
-            alt="90sure Logo" 
-            className="w-64 h-64 object-contain drop-shadow-2xl"
-          />
-        </motion.div>
-
         <Card className="max-w-md w-full bg-white/50 backdrop-blur-sm border-2 border-white/50">
           <CardHeader className="text-center">
             <CardTitle className="text-4xl font-display text-primary mb-2">90sure</CardTitle>
