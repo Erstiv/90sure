@@ -87,9 +87,9 @@ export default function GameRoom() {
     if (!gameId) setLocation("/");
   }, [gameId, setLocation]);
 
-  // Clear answer reveal when game advances past revealing
+  // Clear answer reveal when game advances past revealing (to next question or finished)
   useEffect(() => {
-    if (data?.game.status === "playing" && socket.answerReveal) {
+    if (data?.game.status !== "revealing" && socket.answerReveal) {
       socket.clearAnswerReveal();
     }
   }, [data?.game.status, data?.game.currentQuestionIndex]);
