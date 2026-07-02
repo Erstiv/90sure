@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRoute, useLocation } from "wouter";
-import { useGame, useAddPlayer, useStartGame, useSubmitGuesses, useResetGame, useSubmitPlayerGuess, useJoinGame, calculateResults } from "@/hooks/use-games";
+import { useGame, useAddPlayer, useStartGame, useSubmitGuesses, useResetGame, useSubmitPlayerGuess, useJoinGame, useDeleteGame, calculateResults } from "@/hooks/use-games";
 import { useSocket, type AnswerRevealData } from "@/hooks/use-socket";
 import { getStoredName } from "@/hooks/use-player-name";
 import { Button } from "@/components/Button";
@@ -8,7 +8,7 @@ import { Input } from "@/components/Input";
 import { Card } from "@/components/Card";
 import { Layout } from "@/components/Layout";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Play, Trophy, RotateCcw, ArrowRight, CheckCircle2, Crown, AlertCircle, Volume2, Info, Copy, Users, Check, Loader2, WifiOff, Wifi, Clock } from "lucide-react";
+import { Plus, Play, Trophy, RotateCcw, ArrowRight, CheckCircle2, Crown, AlertCircle, Volume2, Info, Copy, Users, Check, Loader2, WifiOff, Wifi, Clock, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -87,6 +87,14 @@ export default function GameRoom() {
   useEffect(() => {
     if (!gameId) setLocation("/");
   }, [gameId, setLocation]);
+
+  // Host closed the room — clear our session and bounce home
+  useEffect(() => {
+    if (socket.gameDeleted) {
+      try { localStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
+      setLocation("/");
+    }
+  }, [socket.gameDeleted, setLocation]);
 
   // Clear answer reveal when game advances past revealing (to next question or finished)
   useEffect(() => {
@@ -272,9 +280,11 @@ function SetupScreen({ data }: { data: NonNullable<ReturnType<typeof useGame>['d
   const addPlayer = useAddPlayer();
   const joinGame = useJoinGame();
   const startGame = useStartGame();
+  const deleteGame = useDeleteGame();
   const socket = useSocket(game.id);
+  const [, setLocation] = useLocation();
   const joinUrl = isOnline ? `${window.location.origin}/join/${game.id}` : "";
-  
+
   const storedSession = getStoredSession();
   // Host has joined if we have a session for this game — don't require player list confirmation
   // (avoids double-join when navigating from LobbyBrowser where host already joined)
@@ -300,6 +310,19 @@ function SetupScreen({ data }: { data: NonNullable<ReturnType<typeof useGame>['d
     await navigator.clipboard.writeText(joinUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  // The host (creator) can close the room from the lobby.
+  const currentPlayerName = players.find((p: Player) => p.id === storedSession?.playerId)?.name;
+  const isHost = isOnline && !!game.hostName && (currentPlayerName === game.hostName || getStoredName() === game.hostName);
+
+  const handleCloseRoom = () => {
+    if (!storedSession?.sessionToken) return;
+    if (!window.confirm("Close this room for everyone? This can't be undone.")) return;
+    deleteGame.mutate(
+      { gameId: game.id, sessionToken: storedSession.sessionToken },
+      { onSuccess: () => { try { localStorage.removeItem(SESSION_KEY); } catch { /* ignore */ } setLocation("/"); } }
+    );
   };
 
   const handleStartGame = () => {
@@ -432,9 +455,9 @@ function SetupScreen({ data }: { data: NonNullable<ReturnType<typeof useGame>['d
           )}
         </div>
 
-        <Button 
-          className="w-full" 
-          size="lg" 
+        <Button
+          className="w-full"
+          size="lg"
           onClick={handleStartGame}
           disabled={players.length < 1 || startGame.isPending}
           isLoading={startGame.isPending}
@@ -442,6 +465,19 @@ function SetupScreen({ data }: { data: NonNullable<ReturnType<typeof useGame>['d
           <Play className="mr-2 h-5 w-5" />
           Start Game{players.length > 1 ? ` with ${players.length} Players` : ""}
         </Button>
+
+        {isHost && (
+          <Button
+            variant="ghost"
+            className="w-full mt-3 text-destructive hover:bg-destructive/10"
+            onClick={handleCloseRoom}
+            disabled={deleteGame.isPending}
+            isLoading={deleteGame.isPending}
+            data-testid="button-close-room"
+          >
+            <Trash2 className="mr-2 h-4 w-4" /> Close Room
+          </Button>
+        )}
       </Card>
     </Layout>
   );

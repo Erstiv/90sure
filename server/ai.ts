@@ -40,7 +40,8 @@ Return ONLY valid JSON with a "questions" array of 10 objects:
 - "text": the question string
 - "answer": the integer answer (MUST be accurate and verifiable)
 - "sourceIndex": ${sources.length > 0 ? "the source number (1-" + sources.length + ")" : "null"}
-- "explanation": 1-2 sentence explanation (NO URLs)`;
+- "explanation": 1-2 sentence explanation (NO URLs)
+- "topic": the specific real-world subject of this question in 1-4 words, suitable for looking up on Wikipedia (e.g. "Romani Vardo", "Eiffel Tower", "human skeleton")`;
 
   const result = await model.generateContent(prompt);
   const text = result.response.text();
@@ -57,9 +58,17 @@ Return ONLY valid JSON with a "questions" array of 10 objects:
     const sourceInfo = sourceIdx
       ? sources.find((s) => s.index === sourceIdx)
       : null;
-    const source = sourceInfo
-      ? `${q.explanation || "See source for details."} ${sourceInfo.url}`
-      : q.explanation || "No source available.";
-    return { text: q.text, answer: q.answer, source };
+    const explanation = q.explanation || "See source for details.";
+    // Prefer a real web source from Tavily; otherwise fall back to a Wikipedia
+    // lookup for the question's topic (Special:Search always resolves — no 404s).
+    const url = sourceInfo?.url || wikiSearchUrl(q.topic || category);
+    return { text: q.text, answer: q.answer, source: `${explanation} ${url}` };
   });
+}
+
+// Build a Wikipedia "Go" search URL: redirects straight to the article when an
+// exact match exists, otherwise shows search results. Never 404s.
+function wikiSearchUrl(topic: string): string {
+  const term = String(topic || "").trim() || "trivia";
+  return `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(term)}&title=Special:Search&go=Go`;
 }

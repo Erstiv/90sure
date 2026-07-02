@@ -141,5 +141,29 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json(game);
   });
 
+  app.delete(api.games.remove.path, async (req, res) => {
+    const id = parseInt(req.params.id);
+    const { sessionToken } = req.body || {};
+    const game = await storage.getGame(id);
+    if (!game) return res.status(404).json({ message: "Game not found" });
+    // Only a participant of the room (the host included) may close it.
+    const player = sessionToken ? await storage.getPlayerBySessionToken(sessionToken) : null;
+    if (!player || player.gameId !== id) return res.status(403).json({ message: "Not allowed" });
+    const io = getIO();
+    io?.to(`game-${id}`).emit("game-deleted", { gameId: id });
+    await storage.deleteGame(id);
+    res.json({ success: true });
+  });
+
+  // Sweep abandoned setup rooms on boot, then every 30 minutes.
+  storage.cleanupStaleGames()
+    .then((n) => n > 0 && console.log(`[cleanup] removed ${n} stale room(s)`))
+    .catch((e) => console.error("[cleanup] failed:", e));
+  setInterval(() => {
+    storage.cleanupStaleGames()
+      .then((n) => n > 0 && console.log(`[cleanup] removed ${n} stale room(s)`))
+      .catch((e) => console.error("[cleanup] failed:", e));
+  }, 30 * 60 * 1000);
+
   return httpServer;
 }

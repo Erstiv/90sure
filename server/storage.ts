@@ -1,12 +1,19 @@
 import { db } from "./db";
 import { games, players, guesses, gameQuestions, type Game, type Player, type Guess, type GameQuestion } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, gt, lt, or, isNull } from "drizzle-orm";
+
+// Rooms sitting in "setup" (nobody started them) are hidden from Browse after
+// this long, and permanently deleted after the cleanup age below.
+const BROWSE_MAX_AGE_MS = 2 * 60 * 60 * 1000; // 2 hours
+const STALE_CLEANUP_AGE_MS = 3 * 60 * 60 * 1000; // 3 hours
 
 export interface IStorage {
   createGame(category: string, difficulty: string, mode?: string, visibility?: string, hostName?: string, roomName?: string, timePerQuestion?: number, maxPlayers?: number): Promise<Game>;
   getGame(id: number): Promise<Game | undefined>;
   getGameByJoinCode(joinCode: string): Promise<Game | undefined>;
   getPublicLobbies(): Promise<{ id: number; category: string; difficulty: string; hostName: string | null; roomName: string | null; playerCount: number; joinCode: string | null }[]>;
+  deleteGame(id: number): Promise<void>;
+  cleanupStaleGames(): Promise<number>;
   updateGameStatus(id: number, status: string, currentQuestionIndex?: number): Promise<Game>;
   createPlayer(gameId: number, name: string, sessionToken?: string): Promise<Player>;
   getPlayers(gameId: number): Promise<Player[]>;
@@ -49,6 +56,7 @@ export class DatabaseStorage implements IStorage {
       roomName: roomName || null,
       timePerQuestion: timePerQuestion || null,
       maxPlayers: maxPlayers || 10,
+      createdAt: Date.now(),
     }).returning();
     return game;
   }
@@ -64,9 +72,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPublicLobbies(): Promise<{ id: number; category: string; difficulty: string; hostName: string | null; roomName: string | null; playerCount: number; joinCode: string | null }[]> {
+    const freshAfter = Date.now() - BROWSE_MAX_AGE_MS;
     const publicGames = await db.select().from(games)
-      .where(and(eq(games.visibility, "public"), eq(games.status, "setup"), eq(games.mode, "online")));
-    
+      .where(and(
+        eq(games.visibility, "public"),
+        eq(games.status, "setup"),
+        eq(games.mode, "online"),
+        gt(games.createdAt, freshAfter), // hide abandoned rooms (and legacy rows with null createdAt)
+      ));
+
     const lobbies = await Promise.all(publicGames.map(async (game) => {
       const gamePlayers = await this.getPlayers(game.id);
       return {
@@ -80,6 +94,28 @@ export class DatabaseStorage implements IStorage {
       };
     }));
     return lobbies;
+  }
+
+  async deleteGame(id: number): Promise<void> {
+    // Remove all child rows first (no FK cascade defined in the schema).
+    await db.delete(guesses).where(eq(guesses.gameId, id));
+    await db.delete(gameQuestions).where(eq(gameQuestions.gameId, id));
+    await db.delete(players).where(eq(players.gameId, id));
+    await db.delete(games).where(eq(games.id, id));
+  }
+
+  async cleanupStaleGames(): Promise<number> {
+    const cutoff = Date.now() - STALE_CLEANUP_AGE_MS;
+    // Only ever remove rooms still in setup — never a game that's playing/finished.
+    const stale = await db.select({ id: games.id }).from(games)
+      .where(and(
+        eq(games.status, "setup"),
+        or(lt(games.createdAt, cutoff), isNull(games.createdAt)),
+      ));
+    for (const g of stale) {
+      await this.deleteGame(g.id);
+    }
+    return stale.length;
   }
 
   async updateGameStatus(id: number, status: string, currentQuestionIndex?: number): Promise<Game> {

@@ -182,6 +182,25 @@ export function useSubmitGuesses() {
   });
 }
 
+export function useDeleteGame() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ gameId, sessionToken }: { gameId: number; sessionToken: string }) => {
+      const url = buildUrl(api.games.remove.path, { id: gameId });
+      const res = await fetch(url, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionToken }),
+      });
+      if (!res.ok) throw new Error("Failed to close room");
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.lobbies.list.path] });
+    },
+  });
+}
+
 export function useResetGame() {
   const queryClient = useQueryClient();
   const { toast } = useToast();

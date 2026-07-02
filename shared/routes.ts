@@ -117,6 +117,14 @@ export const api = {
       responses: {
         200: z.custom<typeof games.$inferSelect>(),
       },
+    },
+    remove: {
+      method: 'DELETE' as const,
+      path: '/api/games/:id',
+      input: z.object({ sessionToken: z.string() }),
+      responses: {
+        200: z.object({ success: z.boolean() }),
+      },
     }
   },
 };

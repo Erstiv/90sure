@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, bigint } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -15,6 +15,7 @@ export const games = pgTable("games", {
   roomName: text("room_name"), // custom name for the waiting room
   maxPlayers: integer("max_players").notNull().default(10),
   timePerQuestion: integer("time_per_question"), // seconds, null = no timer
+  createdAt: bigint("created_at", { mode: "number" }), // unix ms; used to age out stale rooms
 });
 
 export const players = pgTable("players", {

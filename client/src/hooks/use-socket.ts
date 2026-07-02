@@ -44,6 +44,7 @@ export function useSocket(gameId: number | null) {
   const [answerReveal, setAnswerReveal] = useState<AnswerRevealData | null>(null);
   const [disconnectedPlayer, setDisconnectedPlayer] = useState<{ playerId: number; playerName: string } | null>(null);
   const [timerDeadline, setTimerDeadline] = useState<number | null>(null);
+  const [gameDeleted, setGameDeleted] = useState(false);
 
   useEffect(() => {
     if (!gameId) return;
@@ -110,6 +111,10 @@ export function useSocket(gameId: number | null) {
       setTimerDeadline(data.deadline);
     };
 
+    const handleGameDeleted = () => {
+      setGameDeleted(true);
+    };
+
     s.on("connect", handleConnect);
     s.on("disconnect", handleDisconnect);
     s.on("reconnect_attempt", handleReconnectAttempt);
@@ -118,6 +123,7 @@ export function useSocket(gameId: number | null) {
     s.on("answer-reveal", handleAnswerReveal);
     s.on("player-disconnected", handlePlayerDisconnected);
     s.on("timer-started", handleTimerStarted);
+    s.on("game-deleted", handleGameDeleted);
 
     return () => {
       s.off("connect", handleConnect);
@@ -128,6 +134,7 @@ export function useSocket(gameId: number | null) {
       s.off("answer-reveal", handleAnswerReveal);
       s.off("player-disconnected", handlePlayerDisconnected);
       s.off("timer-started", handleTimerStarted);
+      s.off("game-deleted", handleGameDeleted);
     };
   }, [gameId]);
 
@@ -159,6 +166,7 @@ export function useSocket(gameId: number | null) {
     clearAnswerReveal,
     disconnectedPlayer,
     timerDeadline,
+    gameDeleted,
     emitPlayerJoined,
     emitPlayerSubmitted,
     emitGameStarted,
