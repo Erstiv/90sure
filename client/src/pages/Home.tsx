@@ -8,7 +8,7 @@ import { Input } from "@/components/Input";
 import { Layout } from "@/components/Layout";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Plus, Loader2, RefreshCw, Gamepad2, Hash, Clock, Trophy } from "lucide-react";
+import { Users, Plus, Loader2, RefreshCw, Gamepad2, Hash, Clock, Trophy, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -70,6 +70,7 @@ export default function Home() {
   const [difficulty, setDifficulty] = useState("normal");
   const [timerEnabled, setTimerEnabled] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState("60");
+  const [deepSearch, setDeepSearch] = useState(false);
 
   // Join-by-code state
   const [joinCode, setJoinCode] = useState("");
@@ -103,6 +104,7 @@ export default function Home() {
       visibility: "public",
       hostName: name,
       roomName: roomName.trim() || `${name}'s game`,
+      deepSearch,
       ...(timerEnabled && timerValue > 0 ? { timePerQuestion: timerValue } : {}),
     });
     const result = await joinGame.mutateAsync({ gameId: game.id, name });
@@ -337,6 +339,22 @@ export default function Home() {
                   </SelectContent>
                 </Select>
               )}
+            </div>
+
+            {/* Deep source search — thorough web research, slower */}
+            <div className="rounded-xl border-2 border-border p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Search className="w-5 h-5 text-primary" />
+                  <div>
+                    <Label htmlFor="deep-switch" className="cursor-pointer">Deep Source Search</Label>
+                    <p className="text-xs text-muted-foreground">Richer web sources, but takes ~20s longer to build</p>
+                  </div>
+                </div>
+                <span data-testid="switch-deep">
+                  <Toggle id="deep-switch" checked={deepSearch} onChange={setDeepSearch} />
+                </span>
+              </div>
             </div>
 
             <Button

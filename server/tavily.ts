@@ -12,7 +12,7 @@ export interface TavilyResponse {
   answer?: string;
 }
 
-export async function searchCategoryFacts(category: string, difficulty: string): Promise<{ facts: string[]; sources: { title: string; url: string }[] }> {
+export async function searchCategoryFacts(category: string, difficulty: string, deep: boolean = false): Promise<{ facts: string[]; sources: { title: string; url: string }[] }> {
   if (!TAVILY_API_KEY) {
     console.log("No Tavily API key found, skipping web search");
     return { facts: [], sources: [] };
@@ -20,7 +20,7 @@ export async function searchCategoryFacts(category: string, difficulty: string):
 
   try {
     const searchQuery = `${category} interesting facts statistics numbers data ${difficulty === 'expert' ? 'obscure' : ''}`;
-    
+
     const response = await fetch('https://api.tavily.com/search', {
       method: 'POST',
       headers: {
@@ -29,7 +29,7 @@ export async function searchCategoryFacts(category: string, difficulty: string):
       },
       body: JSON.stringify({
         query: searchQuery,
-        search_depth: 'advanced',
+        search_depth: deep ? 'advanced' : 'basic', // deep = more thorough but slower
         max_results: 8,
         include_answer: true,
       }),

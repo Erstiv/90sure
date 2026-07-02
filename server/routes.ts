@@ -21,9 +21,9 @@ function getFallbackQuestions(_category: string) {
   ];
 }
 
-async function generateGameQuestions(gameId: number, category: string, difficulty: string) {
+async function generateGameQuestions(gameId: number, category: string, difficulty: string, deepSearch: boolean = false) {
   try {
-    const { facts, sources } = await searchCategoryFacts(category, difficulty);
+    const { facts, sources } = await searchCategoryFacts(category, difficulty, deepSearch);
     const numberedSources = sources.slice(0, 8).map((s, i) => ({ ...s, index: i + 1 }));
     const questions = await generateQuestions(category, difficulty, numberedSources, facts);
     if (questions.length > 0) {
@@ -43,13 +43,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.post(api.games.create.path, async (req, res) => {
-    const { category, difficulty, mode, visibility, hostName, roomName, timePerQuestion, maxPlayers } = api.games.create.input.parse(req.body);
+    const { category, difficulty, mode, visibility, hostName, roomName, timePerQuestion, maxPlayers, deepSearch } = api.games.create.input.parse(req.body);
     const categoryName = category || "general knowledge";
     const difficultyLevel = difficulty || "normal";
     const gameMode = mode || "local";
     const gameVisibility = visibility || (gameMode === "online" ? "public" : "private");
     const game = await storage.createGame(categoryName, difficultyLevel, gameMode, gameVisibility, hostName, roomName, timePerQuestion, maxPlayers);
-    await generateGameQuestions(game.id, categoryName, difficultyLevel);
+    await generateGameQuestions(game.id, categoryName, difficultyLevel, deepSearch || false);
     res.json(game);
   });
 
