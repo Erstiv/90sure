@@ -341,19 +341,38 @@ export default function Home() {
               )}
             </div>
 
-            {/* Deep source search — thorough web research, slower */}
+            {/* Lighter vs heavier — how much web research to do for sources */}
             <div className="rounded-xl border-2 border-border p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Search className="w-5 h-5 text-primary" />
-                  <div>
-                    <Label htmlFor="deep-switch" className="cursor-pointer">Deep Source Search</Label>
-                    <p className="text-xs text-muted-foreground">More thorough web research for sources (slightly slower)</p>
-                  </div>
+              <div className="flex items-center gap-2 mb-3">
+                <Search className="w-5 h-5 text-primary" />
+                <div>
+                  <Label className="cursor-default">Sourcing</Label>
+                  <p className="text-xs text-muted-foreground">Lighter is quicker; heavier does deeper web research</p>
                 </div>
-                <span data-testid="switch-deep">
-                  <Toggle id="deep-switch" checked={deepSearch} onChange={setDeepSearch} />
-                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDeepSearch(false)}
+                  className={cn(
+                    "py-2 rounded-lg border-2 font-semibold text-sm transition-all",
+                    !deepSearch ? "border-primary bg-primary/10 shadow-sm" : "border-border bg-white/30 hover:border-primary/50"
+                  )}
+                  data-testid="weight-lighter"
+                >
+                  🪶 Lighter
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeepSearch(true)}
+                  className={cn(
+                    "py-2 rounded-lg border-2 font-semibold text-sm transition-all",
+                    deepSearch ? "border-primary bg-primary/10 shadow-sm" : "border-border bg-white/30 hover:border-primary/50"
+                  )}
+                  data-testid="weight-heavier"
+                >
+                  🏋 Heavier
+                </button>
               </div>
             </div>
 
