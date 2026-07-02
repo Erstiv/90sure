@@ -7,13 +7,13 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import GameRoom from "@/pages/GameRoom";
 import JoinGame from "@/pages/JoinGame";
-import LobbyBrowser from "@/pages/LobbyBrowser";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/lobbies" component={LobbyBrowser} />
+      {/* Legacy route — the lobby browser is now folded into Home */}
+      <Route path="/lobbies" component={Home} />
       <Route path="/game/:id" component={GameRoom} />
       <Route path="/join/:id" component={JoinGame} />
       <Route component={NotFound} />

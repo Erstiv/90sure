@@ -1,6 +1,6 @@
-import { useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { useGame, useJoinGame } from "@/hooks/use-games";
+import { usePlayerName } from "@/hooks/use-player-name";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
@@ -32,7 +32,7 @@ export default function JoinGame() {
   const joinGame = useJoinGame();
   const socket = useSocket(gameId);
 
-  const [playerName, setPlayerName] = useState("");
+  const [playerName, setPlayerName] = usePlayerName();
   const storedSession = getStoredSession();
 
   const handleJoin = async (e: React.FormEvent) => {

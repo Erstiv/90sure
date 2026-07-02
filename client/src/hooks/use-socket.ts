@@ -98,6 +98,7 @@ export function useSocket(gameId: number | null) {
 
     const handleAnswerReveal = (data: AnswerRevealData) => {
       setAnswerReveal(data);
+      setTimerDeadline(null); // question is over; next question re-emits timer-started
     };
 
     const handlePlayerDisconnected = (data: { playerId: number; playerName: string }) => {

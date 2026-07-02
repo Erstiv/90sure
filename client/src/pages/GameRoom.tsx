@@ -2,12 +2,13 @@ import { useState, useEffect, useMemo } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useGame, useAddPlayer, useStartGame, useSubmitGuesses, useResetGame, useSubmitPlayerGuess, useJoinGame, calculateResults } from "@/hooks/use-games";
 import { useSocket, type AnswerRevealData } from "@/hooks/use-socket";
+import { getStoredName } from "@/hooks/use-player-name";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { Card } from "@/components/Card";
 import { Layout } from "@/components/Layout";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Play, Trophy, RotateCcw, ArrowRight, CheckCircle2, Crown, AlertCircle, Volume2, Info, Copy, Users, Check, Loader2, WifiOff, Wifi } from "lucide-react";
+import { Plus, Play, Trophy, RotateCcw, ArrowRight, CheckCircle2, Crown, AlertCircle, Volume2, Info, Copy, Users, Check, Loader2, WifiOff, Wifi, Clock } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -264,13 +265,14 @@ function AnswerRevealScreen({ reveal, players }: { reveal: NonNullable<ReturnTyp
 // -----------------------------------------------------------------------------
 function SetupScreen({ data }: { data: NonNullable<ReturnType<typeof useGame>['data']> }) {
   const { game, players } = data;
-  const [playerName, setPlayerName] = useState("");
+  const isOnline = game.mode === "online";
+  // Prefill the host's name (entered once on Home) so they don't retype it here.
+  const [playerName, setPlayerName] = useState(() => (isOnline ? getStoredName() : ""));
   const [copied, setCopied] = useState(false);
   const addPlayer = useAddPlayer();
   const joinGame = useJoinGame();
   const startGame = useStartGame();
   const socket = useSocket(game.id);
-  const isOnline = game.mode === "online";
   const joinUrl = isOnline ? `${window.location.origin}/join/${game.id}` : "";
   
   const storedSession = getStoredSession();
@@ -446,6 +448,43 @@ function SetupScreen({ data }: { data: NonNullable<ReturnType<typeof useGame>['d
 }
 
 // -----------------------------------------------------------------------------
+// QUESTION TIMER (online, host-enabled) — counts down to the server deadline
+// -----------------------------------------------------------------------------
+function QuestionTimer({ deadline, total }: { deadline: number; total: number }) {
+  const [remaining, setRemaining] = useState(() => Math.max(0, (deadline - Date.now()) / 1000));
+
+  useEffect(() => {
+    const tick = () => setRemaining(Math.max(0, (deadline - Date.now()) / 1000));
+    tick();
+    const id = setInterval(tick, 200);
+    return () => clearInterval(id);
+  }, [deadline]);
+
+  const secs = Math.ceil(remaining);
+  const pct = Math.max(0, Math.min(100, (remaining / Math.max(total, 1)) * 100));
+  const low = remaining <= 10;
+
+  return (
+    <div className="mb-4" data-testid="question-timer">
+      <div className="flex items-center justify-between mb-1">
+        <span className={cn("text-sm font-bold flex items-center gap-1", low ? "text-destructive" : "text-muted-foreground")}>
+          <Clock className="w-4 h-4" /> Time left
+        </span>
+        <span className={cn("text-lg font-black tabular-nums", low ? "text-destructive animate-pulse" : "text-primary")}>
+          {secs}s
+        </span>
+      </div>
+      <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+        <div
+          className={cn("h-full transition-all duration-200 ease-linear", low ? "bg-destructive" : "bg-primary")}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// -----------------------------------------------------------------------------
 // PLAYING SCREEN
 // -----------------------------------------------------------------------------
 function PlayingScreen({ data }: { data: NonNullable<ReturnType<typeof useGame>['data']> }) {
@@ -575,6 +614,14 @@ function PlayingScreen({ data }: { data: NonNullable<ReturnType<typeof useGame>[
             {submittedCount}/{players.length} answered
           </span>
         </div>
+
+        {socket.timerDeadline && game.timePerQuestion && !hasSubmitted && (
+          <QuestionTimer
+            key={socket.timerDeadline}
+            deadline={socket.timerDeadline}
+            total={game.timePerQuestion}
+          />
+        )}
 
         <motion.div
           key={game.currentQuestionIndex}
