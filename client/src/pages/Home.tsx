@@ -8,7 +8,7 @@ import { Input } from "@/components/Input";
 import { Layout } from "@/components/Layout";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Plus, Loader2, RefreshCw, Gamepad2, Hash, Clock, Trophy, Search } from "lucide-react";
+import { Users, Plus, Loader2, RefreshCw, Gamepad2, Hash, Clock, Trophy, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -70,7 +70,7 @@ export default function Home() {
   const [difficulty, setDifficulty] = useState("normal");
   const [timerEnabled, setTimerEnabled] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState("60");
-  const [deepSearch, setDeepSearch] = useState(false);
+  const [heavy, setHeavy] = useState(false);
 
   // Join-by-code state
   const [joinCode, setJoinCode] = useState("");
@@ -104,7 +104,7 @@ export default function Home() {
       visibility: "public",
       hostName: name,
       roomName: roomName.trim() || `${name}'s game`,
-      deepSearch,
+      heavy,
       ...(timerEnabled && timerValue > 0 ? { timePerQuestion: timerValue } : {}),
     });
     const result = await joinGame.mutateAsync({ gameId: game.id, name });
@@ -341,22 +341,22 @@ export default function Home() {
               )}
             </div>
 
-            {/* Lighter vs heavier — how much web research to do for sources */}
+            {/* Lighter vs heavier question generation */}
             <div className="rounded-xl border-2 border-border p-4">
               <div className="flex items-center gap-2 mb-3">
-                <Search className="w-5 h-5 text-primary" />
+                <Sparkles className="w-5 h-5 text-primary" />
                 <div>
-                  <Label className="cursor-default">Sourcing</Label>
-                  <p className="text-xs text-muted-foreground">Lighter is quicker; heavier does deeper web research</p>
+                  <Label className="cursor-default">Question Generation</Label>
+                  <p className="text-xs text-muted-foreground">Lighter builds in seconds; heavier thinks harder for sharper, better-sourced questions</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => setDeepSearch(false)}
+                  onClick={() => setHeavy(false)}
                   className={cn(
                     "py-2 rounded-lg border-2 font-semibold text-sm transition-all",
-                    !deepSearch ? "border-primary bg-primary/10 shadow-sm" : "border-border bg-white/30 hover:border-primary/50"
+                    !heavy ? "border-primary bg-primary/10 shadow-sm" : "border-border bg-white/30 hover:border-primary/50"
                   )}
                   data-testid="weight-lighter"
                 >
@@ -364,10 +364,10 @@ export default function Home() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setDeepSearch(true)}
+                  onClick={() => setHeavy(true)}
                   className={cn(
                     "py-2 rounded-lg border-2 font-semibold text-sm transition-all",
-                    deepSearch ? "border-primary bg-primary/10 shadow-sm" : "border-border bg-white/30 hover:border-primary/50"
+                    heavy ? "border-primary bg-primary/10 shadow-sm" : "border-border bg-white/30 hover:border-primary/50"
                   )}
                   data-testid="weight-heavier"
                 >

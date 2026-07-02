@@ -32,7 +32,7 @@ export const api = {
         roomName: z.string().optional(),
         timePerQuestion: z.number().optional(),
         maxPlayers: z.number().optional(),
-        deepSearch: z.boolean().optional(),
+        heavy: z.boolean().optional(),
       }),
       responses: {
         200: z.custom<typeof games.$inferSelect>(),

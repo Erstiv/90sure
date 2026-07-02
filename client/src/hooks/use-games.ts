@@ -53,11 +53,11 @@ export function useLobbies() {
 export function useCreateGame() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ category, difficulty, mode, visibility, hostName, roomName, timePerQuestion, deepSearch }: { category: string; difficulty: string; mode?: string; visibility?: string; hostName?: string; roomName?: string; timePerQuestion?: number; deepSearch?: boolean }) => {
+    mutationFn: async ({ category, difficulty, mode, visibility, hostName, roomName, timePerQuestion, heavy }: { category: string; difficulty: string; mode?: string; visibility?: string; hostName?: string; roomName?: string; timePerQuestion?: number; heavy?: boolean }) => {
       const res = await fetch(api.games.create.path, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category, difficulty, mode: mode || "local", visibility: visibility || "private", hostName, roomName, timePerQuestion, deepSearch })
+        body: JSON.stringify({ category, difficulty, mode: mode || "local", visibility: visibility || "private", hostName, roomName, timePerQuestion, heavy })
       });
       if (!res.ok) throw new Error("Failed to create game");
       return await res.json();

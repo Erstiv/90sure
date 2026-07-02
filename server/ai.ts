@@ -10,9 +10,14 @@ export async function generateQuestions(
   category: string,
   difficulty: string,
   sources: { title: string; url: string; index: number }[],
-  facts: string[]
+  facts: string[],
+  heavy: boolean = false
 ): Promise<{ text: string; answer: number; source: string }[]> {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  // Lighter = disable the model's "thinking" step for a much faster (~3s vs ~7s)
+  // generation; Heavier lets gemini-2.5-flash reason for more accurate questions.
+  const modelParams: any = { model: "gemini-2.5-flash" };
+  if (!heavy) modelParams.generationConfig = { thinkingConfig: { thinkingBudget: 0 } };
+  const model = genAI.getGenerativeModel(modelParams);
 
   const sourcesContext =
     sources.length > 0
