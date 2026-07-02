@@ -348,7 +348,7 @@ export default function Home() {
                   <Search className="w-5 h-5 text-primary" />
                   <div>
                     <Label htmlFor="deep-switch" className="cursor-pointer">Deep Source Search</Label>
-                    <p className="text-xs text-muted-foreground">Richer web sources, but takes ~20s longer to build</p>
+                    <p className="text-xs text-muted-foreground">More thorough web research for sources (slightly slower)</p>
                   </div>
                 </div>
                 <span data-testid="switch-deep">
