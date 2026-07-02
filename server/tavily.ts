@@ -25,9 +25,9 @@ export async function searchCategoryFacts(category: string, difficulty: string):
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${TAVILY_API_KEY}`,
       },
       body: JSON.stringify({
-        api_key: TAVILY_API_KEY,
         query: searchQuery,
         search_depth: 'advanced',
         max_results: 8,
